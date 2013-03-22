@@ -1,0 +1,48 @@
+; This is the configuration file for the shibboleth
+; metadata generation script. There should be one
+; entry here per Aegir instance. Information from
+; all will be merged into one metadata file.
+
+; Path to samlsign (macports = /opt/local/bin/samlsign)
+; Note this errors on mountain lion
+; 1363961422 ERROR OpenSSL : error code: 33558530 in bss_file.c, line 398
+; 1363961422 ERROR OpenSSL : error data: fopen('/etc/opensaml/key.pem','r')
+; 1363961422 ERROR OpenSSL : error code: 537346050 in bss_file.c, line 400
+samlsign = "/opt/local/bin/samlsign"
+
+; how long will the metadata be valid
+; 1814400 = 3 weeks
+max_age = 1814400
+
+contact[] = "First/Last/user@wherever.edu"
+
+; This will be used to sign our file, it is also the key on production
+; It is an extremely sensitive piece of information
+key = "
+-----BEGIN RSA PRIVATE KEY-----
+M213... your super secret key
+-----END RSA PRIVATE KEY-----
+"
+
+[qa]
+
+url = "http://aegir.example.org/"
+user = "drupal-user"
+pass = "drupal-pass"
+cert = "
+-----BEGIN CERTIFICATE-----
+MII... certificate for the shib sp corresponding to this
+aegir instance
+-----END CERTIFICATE-----"
+
+[some_other_environment]
+
+url = "http://other-environment.example.org/"
+user = "drupal-user"
+pass = "drupal-pass"
+cert = "
+-----BEGIN CERTIFICATE-----
+MII... certificate for the shib sp corresponding to this
+aegir instance
+-----END CERTIFICATE-----"
+
