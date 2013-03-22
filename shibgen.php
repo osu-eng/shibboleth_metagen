@@ -84,22 +84,20 @@ class MultiProvider {
     $valid_until = date('Y-m-d', $seconds) . 'T' . date('H:i:s', $seconds).'Z'; // '2011-04-14T09:45:26Z';
     
     foreach ($this->environments() as $environment) {
-      file_put_contents('cert.pem', $this->config[$environment]['cert']);
+      file_put_contents('/tmp/cert.pem', $this->config[$environment]['cert']);
       file_put_contents($metadata_file, "<md:EntitiesDescriptor xmlns:md=\"urn:oasis:names:tc:SAML:2.0:metadata\" validUntil=\"{$valid_until}\" Name=\"https://engineering.osu.edu/aegir\">");
-      $command = "$metagen_cmd $contacts -c cert.pem "
+      $command = "$metagen_cmd $contacts -c /tmp/cert.pem "
         .' -e https://engineering.osu.edu/aegir '
         .' -o "Engineering Drupal Environment "  '
         .' -h '. join(' -h ', $this->names[$environment]) . ' >> ' . $metadata_file;
       system($command);
-      system ('rm -f cert.pem');
+      system ('rm -f /tmp/cert.pem');
       system("echo '</md:EntitiesDescriptor>' >> {$metadata_file}");
       
     }
-    file_put_contents('key.pem', $this->config['key']);
-    print "signing\n";
-    $command = "{$samlsign} -s -f {$metadata_file} -k key.pem > {$metadata_file}.signed";  // this didn't like the output being the metadata.xml file
+    file_put_contents('/tmp/key.pem', trim($this->config['key']));
+    $command = "{$samlsign} -s -f {$metadata_file} -k /tmp/key.pem > {$metadata_file}.signed";  // this didn't like the output being the metadata.xml file
     system($command);
-    system('rm -f key.pem');
     return file_get_contents($metadata_file . '.signed');
   }
 
