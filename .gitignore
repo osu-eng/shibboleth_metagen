@@ -1,1 +1,4 @@
 config.ini
+metadata.xml
+metadata.xml.signed
+*.pem

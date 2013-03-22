@@ -1,5 +1,8 @@
 #! /bin/sh
 
+# This script is included as part of most/all shibboleth distributions
+# To our knowledge, it's not officially supported, but it's handy.
+
 while getopts a:c:e:h:n:o:s:t: c
      do
          case $c in

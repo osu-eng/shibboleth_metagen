@@ -4,6 +4,7 @@
 try {
   $mp = new MultiProvider();
   print_r($mp->names());
+  print $mp->metadata();
 
 }
 catch (Exception $e) {
@@ -31,15 +32,29 @@ class MultiProvider {
 
     // Create a provider object for each environment
     $this->providers = array();
-    foreach ($this->config as $environment => $vals) {
-      $this->providers[$environment] = new Provider($vals);
+    foreach ($this->environments() as $environment) {
+      $this->providers[$environment] = new Provider($this->config[$environment]);
     }
+  }
+
+  /**
+   * Returns a list of environments identified in the config file.
+   */
+  function environments() {
+    $environments = array();
+    $not_environments = array('contact', 'key', 'max_age', 'samlsign');
+    foreach (array_keys($this->config) as $key) {
+      if (!in_array($key, $not_environments)) {
+        $environments[] = $key;
+      }
+    }
+    return $environments;
   }
 
   function names() {
     $this->names = array();
     foreach ($this->providers as $environment => $provider) {
-      $this->names = $provider->names();
+      $this->names[$environment] = $provider->names();
     }
     return $this->names;
   }
@@ -49,41 +64,41 @@ class MultiProvider {
    */
   function metadata() {
 
-    $metadata_file = '/var/aegir/shibboleth/metadata.xml';
-    $metagen_cmd = '/etc/shibboleth/metagen.sh ';
-    $contacts = '-t Jason/Little/little.129@osu.edu -t Corey/Hinshaw/hinshaw.25@osu.edu ';
-    $seconds = time() + 1814400;  // 3 weeks
-    $valid_until = date('Y-m-d', $seconds) . 'T' . date('H:i:s', $seconds).'Z';// '2011-04-14T09:45:26Z';
-    $aliases = drush_get_option('shibboleth_all_site_aliases', array());
-    $options = drush_get_option('shibboleth_all_site_options', array());
-    $samlsign = '/usr/bin/samlsign';
+    # Some necessary scripts/programs
+    $metagen_cmd = './metagen.sh ';           # included in repo
+    $samlsign = $this->config['samlsign'];  # requires shibboleth installed
 
-    //drush_log(print_r($aliases, true).print_R($options, true), 'warning');
-    $names_prefilter = array();
-    foreach ($aliases as $nid => $vals) {
-          if ($options[$nid]['shibboleth_enabled']) {
-        $names_prefilter = array_merge($names_prefilter, $vals);
-      }
+    # Output file
+    $metadata_file = 'metadata.xml';
+
+    # Create a list of contacts as arguments
+    $contacts = '';
+    foreach ($this->config['contact'] as $contact) {
+      $contacts .= " -t {$contact}";
     }
-    $names = array();
-    foreach ($names_prefilter as $name){
-          if (preg_match('/edu$/', $name)){
-            $names[] = $name;
-          }
+
+    # Generate an expiration date for the metadata
+    $seconds = time() + $this->config['max_age'];  
+    $valid_until = date('Y-m-d', $seconds) . 'T' . date('H:i:s', $seconds).'Z'; // '2011-04-14T09:45:26Z';
+    
+    foreach ($this->environments() as $environment) {
+      file_put_contents('cert.pem', $this->config[$environment]['cert']);
+      file_put_contents($metadata_file, "<md:EntitiesDescriptor xmlns:md=\"urn:oasis:names:tc:SAML:2.0:metadata\" validUntil=\"{$valid_until}\" Name=\"https://engineering.osu.edu/aegir\">");
+      $command = "$metagen_cmd $contacts -c cert.pem "
+        .' -e https://engineering.osu.edu/aegir '
+        .' -o "Engineering Drupal Environment "  '
+        .' -h '. join(' -h ', $this->names[$environment]) . ' >> ' . $metadata_file;
+      system($command);
+      system ('rm -f cert.pem');
+      system("echo '</md:EntitiesDescriptor>' >> {$metadata_file}");
+      
     }
-    file_put_contents($metadata_file, "<md:EntitiesDescriptor xmlns:md=\"urn:oasis:names:tc:SAML:2.0:metadata\" validUntil=\"{$valid_until}\" Name=\"https://engineering.osu.edu/aegir\">");
-    $command = "$metagen_cmd $contacts -c /var/aegir/shibboleth/aegir-cert.pem "
-      .' -e https://engineering.osu.edu/aegir '
-          .' -o "Engineering Drupal Environment "  '
-          .'  -h '. join(' -h ', $names) . ' >> ' . $metadata_file;
-    drush_log($command);
+    file_put_contents('key.pem', $this->config['key']);
+    print "signing\n";
+    $command = "{$samlsign} -s -f {$metadata_file} -k key.pem > {$metadata_file}.signed";  // this didn't like the output being the metadata.xml file
     system($command);
-    system("echo '</md:EntitiesDescriptor>' >> {$metadata_file}");
-    $command = "{$samlsign} -s -f {$metadata_file} -k /var/aegir/shibboleth/sign-key.pem > {$metadata_file}.signed";  // this didn't like the output being the metadata.xml file
-    drush_log($command);
-    system($command);
-    system("scp -r /var/aegir/shibboleth prod-web1.web.engadmin.ohio-state.edu:/var/aegir");
-    //system("scp {$metadata_file}.signed /var/www/html/aegir-metadata.xml");
+    system('rm -f key.pem');
+    return file_get_contents($metadata_file . '.signed');
   }
 
 }
