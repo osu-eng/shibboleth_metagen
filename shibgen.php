@@ -3,12 +3,14 @@
 
 try {
   $mp = new MultiProvider();
+  print_r($mp->environments());
   print_r($mp->names());
   print $mp->metadata();
 
 }
 catch (Exception $e) {
   print $e->getMessage();
+  throw $e;
 }
 
 class MultiProvider {
@@ -143,6 +145,7 @@ class Provider {
     $response = my_http_request($this->url . 'hosting_api/user/login', $headers, 'POST', $data);
 
     if ($response->code != 200) {
+      print_r($response);
       throw new Exception("Bad code: {$response->code}");
     }
 
@@ -254,7 +257,7 @@ function my_http_request($url, $headers = array(), $method = 'GET', $data = NULL
     // We don't add the port to prevent from breaking rewrite rules checking the
     // host that do not take into account the port number.
     'Host' => "Host: $host",
-    'User-Agent' => 'User-Agent: Drupal (+http://drupal.org/)',
+    'User-Agent' => 'User-Agent: Mozilla/6.0 (Windows NT 6.2; WOW64; rv:16.0.1) Gecko/20121011 Firefox/16.0.1',
   );
 
   // Only add Content-Length if we actually have any content or if it is a POST
