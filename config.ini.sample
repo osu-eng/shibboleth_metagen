@@ -12,7 +12,7 @@ max_age = 1814400
 
 contacts[] = "First/Last/user@wherever.edu"
 
-; This will be used to sign our file, it is also the key on production
+; This will be used to sign our file
 ; It is an extremely sensitive piece of information
 key = "
 -----BEGIN RSA PRIVATE KEY-----
@@ -21,7 +21,8 @@ M213... your super secret key
 "
 
 [qa]
-
+entity = "https://qa.blah.blahdblah.edu"
+description = "College of Blah QA Environment"
 url = "http://aegir.example.org/"
 user = "drupal-user"
 pass = "drupal-pass"
@@ -33,6 +34,8 @@ aegir instance
 
 [some_other_environment]
 
+entity = "https://prod.blah.blahdblah.edu"
+description = "College of Blah Production Environment"
 url = "http://other-environment.example.org/"
 user = "drupal-user"
 pass = "drupal-pass"
