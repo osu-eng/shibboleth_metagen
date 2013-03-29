@@ -102,7 +102,7 @@ class MultiProvider {
     }
     
     file_put_contents('/tmp/key.pem', trim($this->config['key']));
-    $command = "{$samlsign} -s -f {$metadata_file} -k /tmp/key.pem > {$metadata_file}.signed";  // this didn't like the output being the metadata.xml file
+    $command = "{$samlsign} -s -f {$metadata_file} -k /tmp/key.pem > www/{$metadata_file}.signed";  // this didn't like the output being the metadata.xml file
     system($command);
     return file_get_contents($metadata_file . '.signed');
   }
