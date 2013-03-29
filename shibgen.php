@@ -2,10 +2,10 @@
 
 
 try {
+  print "Beginning regeneration: " . date('Y-m-j H:i') . "\n";
   $mp = new MultiProvider();
-  print_r($mp->environments());
-  print_r($mp->names());
-  print $mp->metadata();
+  $mp->metadata();
+  print "Finished regeneration\n";
 
 }
 catch (Exception $e) {
@@ -65,6 +65,7 @@ class MultiProvider {
    * Returns a string with the contents of a metadata file.
    */
   function metadata() {
+    $this->names();
 
     # Some necessary scripts/programs
     $metagen_cmd = './metagen.sh ';           # included in repo
@@ -84,17 +85,22 @@ class MultiProvider {
     $valid_until = date('Y-m-d', $seconds) . 'T' . date('H:i:s', $seconds).'Z'; // '2011-04-14T09:45:26Z';
     
     foreach ($this->environments() as $environment) {
-      file_put_contents('/tmp/cert.pem', $this->config[$environment]['cert']);
-      file_put_contents($metadata_file, "<md:EntitiesDescriptor xmlns:md=\"urn:oasis:names:tc:SAML:2.0:metadata\" validUntil=\"{$valid_until}\" Name=\"https://engineering.osu.edu/aegir\">");
-      $command = "$metagen_cmd $contacts -c /tmp/cert.pem "
-        .' -e https://engineering.osu.edu/aegir '
-        .' -o "Engineering Drupal Environment "  '
-        .' -h '. join(' -h ', $this->names[$environment]) . ' >> ' . $metadata_file;
-      system($command);
-      system ('rm -f /tmp/cert.pem');
-      system("echo '</md:EntitiesDescriptor>' >> {$metadata_file}");
-      
+      if (count($this->names[$environment]) > 0) {
+        file_put_contents('/tmp/cert.pem', $this->config[$environment]['cert']);
+        file_put_contents($metadata_file, "<md:EntitiesDescriptor xmlns:md=\"urn:oasis:names:tc:SAML:2.0:metadata\" validUntil=\"{$valid_until}\" Name=\"https://engineering.osu.edu/aegir\">");
+        $command = "$metagen_cmd $contacts -c /tmp/cert.pem "
+          .' -e ' . $this->config[$environment]['entity'] // https://engineering.osu.edu/aegir '
+          .' -o "Engineering Drupal Environment "  '
+          .' -h '. join(' -h ', $this->names[$environment]) . ' >> ' . $metadata_file;
+        system($command);
+        system ('rm -f /tmp/cert.pem');
+        system("echo '</md:EntitiesDescriptor>' >> {$metadata_file}");
+      }  
+      else {
+        throw new Excecption("Aborting because $environment has no sites.\nThe signed metadata file has not been replaced.\n"); 
+      }
     }
+    
     file_put_contents('/tmp/key.pem', trim($this->config['key']));
     $command = "{$samlsign} -s -f {$metadata_file} -k /tmp/key.pem > {$metadata_file}.signed";  // this didn't like the output being the metadata.xml file
     system($command);
@@ -143,8 +149,7 @@ class Provider {
     $response = my_http_request($this->url . 'hosting_api/user/login', $headers, 'POST', $data);
 
     if ($response->code != 200) {
-      print_r($response);
-      throw new Exception("Bad code: {$response->code}");
+      throw new Exception("Bad code: {$response->code} for {$this->url}hosting_api/user/login");
     }
 
     $data = json_decode($response->data);
@@ -164,21 +169,27 @@ class Provider {
       // should throw an exception here
       throw new Exception("Bad code: {$response->code}");
     }
-
     $sites = json_decode($response->data);
     if (count($sites) ==0) {
       throw new Exception ('No sites found, that is probably bad');
     }
 
-    $this->aliases = array();
-
+    $aliases = array();
     foreach ($sites as $site) {
       if (in_array('shibboleth_available', $site->flags) || in_array('shibboleth_required', $site->flags)) {
-        $this->aliases[] = $site->hosting_name;
         $this->aliases = array_merge($this->aliases, $site->aliases);
+        array_push($aliases, $site->title); 
       }
     }
 
+    # Let's eliminate any garbage urls (testing sites, extra urls, etc)
+    $filtered = array();
+    foreach (array_unique($aliases) as $alias) {
+      if (preg_match('/.osu.edu$/', $alias) || preg_match('/.engineering.osu.edu$/', $alias)) {
+        $filtered[] = $alias;
+      }
+    } 
+    $this->aliases = $filtered;
     return $this->aliases;
   }
 }
