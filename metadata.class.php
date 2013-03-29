@@ -29,12 +29,12 @@ class Metadata {
   function generate() {
 
     # Some necessary scripts/programs
-    $metagen_cmd = __DIR__ . '/metagen.sh ';
+    $metagen_cmd = dirname(__FILE__) . '/metagen.sh ';
     $samlsign = $this->samlsign;
 
     # Output file
-    $metadata_file = __DIR__ . '/metadata.xml';
-    $signed_metadata_file = __DIR__ . "/www/metadata.xml";
+    $metadata_file = dirname(__FILE__) . '/metadata.xml';
+    $signed_metadata_file = dirname(__FILE__) . "/www/metadata.xml";
 
     # Create a list of contacts as arguments
     $contacts = '';
