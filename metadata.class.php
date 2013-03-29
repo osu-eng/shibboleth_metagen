@@ -18,7 +18,7 @@ class Metadata {
   function __construct($config = NULL) {
 
     if (is_null($config)) {
-      $config = __DIR__ . '/config.ini';
+      $config = dirname(__FILE__) . '/config.ini';
     }
     $this->parse($config);
   }
