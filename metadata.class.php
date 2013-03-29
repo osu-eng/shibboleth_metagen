@@ -32,9 +32,11 @@ class Metadata {
     $metagen_cmd = dirname(__FILE__) . '/metagen.sh ';
     $samlsign = $this->samlsign;
 
-    # Output file
+    # Various files
     $metadata_file = dirname(__FILE__) . '/metadata.xml';
     $signed_metadata_file = dirname(__FILE__) . "/www/metadata.xml";
+    $temp_cert = dirname(__FILE__) . "/cert.pem";
+    $temp_key = dirname(__FILE__) . "/key.pem";
 
     # Create a list of contacts as arguments
     $contacts = '';
@@ -46,26 +48,33 @@ class Metadata {
     $seconds = time() + $this->max_age;
     $valid_until = date('Y-m-d', $seconds) . 'T' . date('H:i:s', $seconds).'Z'; // '2011-04-14T09:45:26Z';
 
-    foreach ($this->providers as $provider) {
+    // Create the metadata file
+    file_put_contents($metadata_file, "<md:EntitiesDescriptor xmlns:md=\"urn:oasis:names:tc:SAML:2.0:metadata\" validUntil=\"{$valid_until}\" Name=\"https://engineering.osu.edu/aegir\">");
+
+    // Iteratively add each provider's information
+    foreach ($this->providers as $key => $provider) {
       if (count($provider->names) > 0) {
-        file_put_contents('/tmp/cert.pem', $provider->cert);
-        file_put_contents($metadata_file, "<md:EntitiesDescriptor xmlns:md=\"urn:oasis:names:tc:SAML:2.0:metadata\" validUntil=\"{$valid_until}\" Name=\"https://engineering.osu.edu/aegir\">");
-        $command = "$metagen_cmd $contacts -c /tmp/cert.pem "
+        file_put_contents($temp_cert, $provider->cert);
+        $command = "$metagen_cmd $contacts -c {$temp_cert} "
           .' -e ' . $provider->entity
           .' -o "' . $provider->description . '"  '
           .' -h '. join(' -h ', $provider->names) . ' >> ' . $metadata_file;
         system($command);
-        system ('rm -f /tmp/cert.pem');
-        system("echo '</md:EntitiesDescriptor>' >> {$metadata_file}");
+        system ("rm -f {$temp_cert}");
       }
       else {
         throw new Excecption("Aborting because $environment has no sites.\n");
       }
     }
 
-    file_put_contents('/tmp/key.pem', trim($this->key));
-    $command = "{$samlsign} -s -f {$metadata_file} -k /tmp/key.pem > $signed_metadata_file";
+    // Close out the metadata file
+    system("echo '</md:EntitiesDescriptor>' >> {$metadata_file}");
+
+    // Sign the file
+    file_put_contents($temp_key, trim($this->key));
+    $command = "{$samlsign} -s -f {$metadata_file} -k {$temp_key} > $signed_metadata_file";
     system($command);
+    system ("rm -f {$temp_key}");
   }
 
   private function parse($path) {
