@@ -66,13 +66,15 @@ class MultiProvider {
    */
   function metadata() {
     $this->names();
-
+    
+    
+   
     # Some necessary scripts/programs
-    $metagen_cmd = './metagen.sh ';           # included in repo
+    $metagen_cmd = __DIR__ . '/metagen.sh ';           # included in repo
     $samlsign = $this->config['samlsign'];  # requires shibboleth installed
 
     # Output file
-    $metadata_file = 'metadata.xml';
+    $metadata_file = __DIR__ . '/metadata.xml';
 
     # Create a list of contacts as arguments
     $contacts = '';
@@ -102,7 +104,7 @@ class MultiProvider {
     }
     
     file_put_contents('/tmp/key.pem', trim($this->config['key']));
-    $command = "{$samlsign} -s -f {$metadata_file} -k /tmp/key.pem > www/{$metadata_file}.signed";  // this didn't like the output being the metadata.xml file
+    $command = "{$samlsign} -s -f {$metadata_file} -k /tmp/key.pem > " . __DIR__ . "/www/metadata.xml"; 
     system($command);
     return file_get_contents($metadata_file . '.signed');
   }
