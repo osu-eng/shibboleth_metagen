@@ -1,7 +1,8 @@
 Shibboleth Metadata Generator
 ==================
 
-==Why?
+Why?
+----
 You might want to use this code if you have a lot of Shibboleth enabled Drupal sites
 managed via the Aegir Hosting Framework.
 
@@ -9,7 +10,8 @@ Combined with some other modules and coordination with your IdP, adding a new sh
 enabled site could be as simple as creating a new site in Aegir and checking the "use shibboleth"
 checkbox.
 
-==What?
+What?
+-----
 This script helps generates a signed shibboleth metadata file from multiple Aegir instances.
 The file contains a list of all the assertion consumer service urls allowed by our service providers.
 In a typical environment, this file would be automatically picked up by whoever runs the Identity Provider to 
